@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>三角形外角性質（可拖曳互動）</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --panel: rgba(255, 255, 255, 0.08);
+        --panelBorder: rgba(255, 255, 255, 0.14);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.72);
+        --good: #7ee787;
+        --accent: #8ab4ff;
+        --warn: #ffcc66;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC",
+          "PingFang TC", "Microsoft JhengHei", Arial, sans-serif;
+        background: radial-gradient(1200px 600px at 30% 10%, rgba(138, 180, 255, 0.25), transparent 60%),
+          radial-gradient(1000px 600px at 80% 30%, rgba(126, 231, 135, 0.15), transparent 55%),
+          var(--bg);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .wrap {
+        min-height: 100%;
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        gap: 16px;
+        padding: 16px;
+      }
+
+      @media (max-width: 980px) {
+        .wrap { grid-template-columns: 1fr; }
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--panelBorder);
+        border-radius: 14px;
+        padding: 14px;
+        backdrop-filter: blur(10px);
+      }
+
+      h1 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        letter-spacing: 0.2px;
+      }
+
+      .desc {
+        margin: 0 0 12px 0;
+        color: var(--muted);
+        line-height: 1.5;
+        font-size: 14px;
+      }
+
+      .kv {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .row {
+        display: grid;
+        gap: 6px;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .value {
+        font-variant-numeric: tabular-nums;
+        font-size: 16px;
+      }
+      .value strong { color: var(--accent); }
+      .ok { color: var(--good); }
+      .hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+      .btns {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      button {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 13px;
+        cursor: pointer;
+        user-select: none;
+      }
+      button:hover { background: rgba(255, 255, 255, 0.12); }
+      button:active { transform: translateY(1px); }
+
+      .stage {
+        position: relative;
+        overflow: hidden;
+        padding: 0;
+      }
+
+      svg {
+        width: 100%;
+        height: min(74vh, 680px);
+        display: block;
+        touch-action: none; /* iPad: 讓拖曳不被捲動/縮放手勢吃掉 */
+      }
+
+      .legend {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.82);
+        max-width: 520px;
+      }
+
+      .legend code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.9);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="card">
+        <h1>外角性質（可拖曳互動）</h1>
+        <p class="desc">
+          拖曳 A、B、C 三點改變三角形形狀。此頁會即時顯示：<strong>頂點 A 的外角</strong>與
+          <strong>另外兩個內角（B + C）</strong>，並驗證它們相等。
+        </p>
+
+        <div class="kv">
+          <div class="row">
+            <div class="label">內角（度）</div>
+            <div class="value" id="angles">—</div>
+          </div>
+          <div class="row">
+            <div class="label">外角性質（以 A 的外角為例）</div>
+            <div class="value" id="exteriorEq">—</div>
+            <div class="hint">
+              外角定義：外角 = \(180^\circ - \angle A\)（與內角互補）。<br />
+              性質：\(\angle A_{外} = \angle B + \angle C\)。
+            </div>
+          </div>
+        </div>
+
+        <div class="btns">
+          <button id="btnReset" type="button">重置</button>
+          <button id="btnRandom" type="button">隨機位置</button>
+        </div>
+
+        <p class="hint" style="margin: 12px 0 0 0;">
+          PC：滑鼠拖曳。iPad：手指拖曳（支援 Apple Pencil）。<br />
+          若 iPad 仍會跟著捲動，請先把頁面捲到最上方再拖曳，或用兩指捲動、單指拖曳點。
+        </p>
+      </section>
+
+      <section class="card stage" aria-label="互動繪圖區">
+        <svg id="svg" viewBox="0 0 900 620" role="img" aria-label="三角形與外角示意">
+          <defs>
+            <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="rgba(138,180,255,0.95)" />
+              <stop offset="100%" stop-color="rgba(126,231,135,0.95)" />
+            </linearGradient>
+          </defs>
+
+          <!-- 主三角形 -->
+          <path id="tri" d="" fill="rgba(138,180,255,0.08)" stroke="url(#lineGrad)" stroke-width="3" />
+
+          <!-- 延長線：從 A 往 BA 方向延長（做外角示意） -->
+          <path id="extRay" d="" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-dasharray="8 8" />
+
+          <!-- 角度弧線 -->
+          <path id="arcA" d="" fill="none" stroke="rgba(138,180,255,0.9)" stroke-width="3" />
+          <path id="arcExtA" d="" fill="none" stroke="rgba(255,204,102,0.95)" stroke-width="3" />
+          <path id="arcB" d="" fill="none" stroke="rgba(126,231,135,0.9)" stroke-width="3" />
+          <path id="arcC" d="" fill="none" stroke="rgba(126,231,135,0.9)" stroke-width="3" />
+
+          <!-- 文字標籤 -->
+          <g id="labels" font-size="15" font-weight="600" fill="rgba(255,255,255,0.92)">
+            <text id="tA" x="0" y="0"></text>
+            <text id="tB" x="0" y="0"></text>
+            <text id="tC" x="0" y="0"></text>
+            <text id="tExtA" x="0" y="0" fill="rgba(255,204,102,0.95)"></text>
+          </g>
+
+          <!-- 拖曳點 -->
+          <g id="points">
+            <circle id="pA" r="10" cx="0" cy="0" fill="rgba(138,180,255,0.95)" stroke="rgba(0,0,0,0.35)" stroke-width="2" />
+            <circle id="pB" r="10" cx="0" cy="0" fill="rgba(126,231,135,0.95)" stroke="rgba(0,0,0,0.35)" stroke-width="2" />
+            <circle id="pC" r="10" cx="0" cy="0" fill="rgba(126,231,135,0.95)" stroke="rgba(0,0,0,0.35)" stroke-width="2" />
+          </g>
+        </svg>
+
+        <div class="legend">
+          拖曳點 <code>A</code>、<code>B</code>、<code>C</code>。橘色弧線是 <code>A</code> 的外角（\(\angle A_{外}\)），藍色弧線是 \(\angle A\)，綠色弧線是 \(\angle B\)、\(\angle C\)。
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const svg = document.getElementById("svg");
+      const tri = document.getElementById("tri");
+      const extRay = document.getElementById("extRay");
+
+      const arcA = document.getElementById("arcA");
+      const arcExtA = document.getElementById("arcExtA");
+      const arcB = document.getElementById("arcB");
+      const arcC = document.getElementById("arcC");
+
+      const pA = document.getElementById("pA");
+      const pB = document.getElementById("pB");
+      const pC = document.getElementById("pC");
+
+      const tA = document.getElementById("tA");
+      const tB = document.getElementById("tB");
+      const tC = document.getElementById("tC");
+      const tExtA = document.getElementById("tExtA");
+
+      const anglesEl = document.getElementById("angles");
+      const exteriorEqEl = document.getElementById("exteriorEq");
+
+      const btnReset = document.getElementById("btnReset");
+      const btnRandom = document.getElementById("btnRandom");
+
+      const viewBox = svg.viewBox.baseVal;
+      const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+      function vec(x, y) { return { x, y }; }
+      function add(a, b) { return vec(a.x + b.x, a.y + b.y); }
+      function sub(a, b) { return vec(a.x - b.x, a.y - b.y); }
+      function mul(a, s) { return vec(a.x * s, a.y * s); }
+      function len(a) { return Math.hypot(a.x, a.y); }
+      function norm(a) {
+        const l = len(a);
+        return l < 1e-9 ? vec(0, 0) : vec(a.x / l, a.y / l);
+      }
+      function dot(a, b) { return a.x * b.x + a.y * b.y; }
+      function cross(a, b) { return a.x * b.y - a.y * b.x; }
+      function radToDeg(r) { return (r * 180) / Math.PI; }
+      function degToRad(d) { return (d * Math.PI) / 180; }
+
+      function angleAt(P, Q, R) {
+        // 角 PQR：以 Q 為頂點，向量 QP 與 QR 的夾角（0..180）
+        const u = sub(P, Q);
+        const v = sub(R, Q);
+        const lu = len(u), lv = len(v);
+        if (lu < 1e-6 || lv < 1e-6) return NaN;
+        const c = clamp(dot(u, v) / (lu * lv), -1, 1);
+        return radToDeg(Math.acos(c));
+      }
+
+      function polar(center, radius, angRad) {
+        return vec(center.x + radius * Math.cos(angRad), center.y + radius * Math.sin(angRad));
+      }
+
+      function arcPath(center, r, startRad, endRad) {
+        // 以短弧畫（<=180），若需要畫外角（可能 > 180）我們會拆成 <=180 的弧來表現
+        const start = polar(center, r, startRad);
+        const end = polar(center, r, endRad);
+        const delta = Math.abs(endRad - startRad);
+        const largeArc = delta > Math.PI ? 1 : 0;
+        const sweep = endRad > startRad ? 1 : 0;
+        return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${r.toFixed(2)} ${r.toFixed(2)} 0 ${largeArc} ${sweep} ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+      }
+
+      function fmtDeg(x) {
+        if (!Number.isFinite(x)) return "—";
+        return `${x.toFixed(1)}°`;
+      }
+
+      function svgPointFromClient(clientX, clientY) {
+        const pt = new DOMPoint(clientX, clientY);
+        const ctm = svg.getScreenCTM();
+        if (!ctm) return vec(0, 0);
+        const p = pt.matrixTransform(ctm.inverse());
+        return vec(p.x, p.y);
+      }
+
+      let A = vec(280, 160);
+      let B = vec(170, 470);
+      let C = vec(640, 420);
+
+      function setCircle(circle, P) {
+        circle.setAttribute("cx", String(P.x));
+        circle.setAttribute("cy", String(P.y));
+      }
+
+      function setText(textEl, P, s) {
+        textEl.setAttribute("x", String(P.x));
+        textEl.setAttribute("y", String(P.y));
+        textEl.textContent = s;
+      }
+
+      function safeTriangle() {
+        // 避免三點幾乎共線導致弧線怪異：若面積太小，稍微擾動 C
+        const area2 = Math.abs(cross(sub(B, A), sub(C, A)));
+        if (area2 < 500) C = add(C, vec(40, -25));
+      }
+
+      function render() {
+        safeTriangle();
+
+        // 主三角形
+        tri.setAttribute(
+          "d",
+          `M ${A.x.toFixed(2)} ${A.y.toFixed(2)} L ${B.x.toFixed(2)} ${B.y.toFixed(2)} L ${C.x.toFixed(2)} ${C.y.toFixed(2)} Z`
+        );
+
+        // 外角示意：從 A 往 BA 方向延長
+        const dirBA = norm(sub(A, B)); // B->A 方向，延長線從 A 往此方向
+        const extLen = 240;
+        const Aext = add(A, mul(dirBA, extLen));
+        extRay.setAttribute("d", `M ${A.x.toFixed(2)} ${A.y.toFixed(2)} L ${Aext.x.toFixed(2)} ${Aext.y.toFixed(2)}`);
+
+        // 角度計算
+        const angA = angleAt(B, A, C);
+        const angB = angleAt(A, B, C);
+        const angC = angleAt(A, C, B);
+        const extA = Number.isFinite(angA) ? 180 - angA : NaN;
+
+        anglesEl.innerHTML = `∠A = <strong>${fmtDeg(angA)}</strong>　∠B = <strong>${fmtDeg(angB)}</strong>　∠C = <strong>${fmtDeg(angC)}</strong>`;
+
+        const sumBC = (Number.isFinite(angB) && Number.isFinite(angC)) ? (angB + angC) : NaN;
+        const diff = (Number.isFinite(extA) && Number.isFinite(sumBC)) ? Math.abs(extA - sumBC) : NaN;
+        const ok = Number.isFinite(diff) && diff < 0.15;
+        exteriorEqEl.innerHTML =
+          `∠A外 = <strong>${fmtDeg(extA)}</strong>　；　∠B + ∠C = <strong>${fmtDeg(sumBC)}</strong>` +
+          (Number.isFinite(diff) ? `　（差：${diff.toFixed(2)}°，<span class="${ok ? "ok" : ""}">${ok ? "相等" : "近似"}</span>）` : "");
+
+        // 更新點
+        setCircle(pA, A);
+        setCircle(pB, B);
+        setCircle(pC, C);
+
+        // 角度弧線（用向量角度）
+        const rIn = 54;
+        const rOut = 68;
+
+        function angOf(v) { return Math.atan2(v.y, v.x); }
+
+        // 內角 A：向量 AB 與 AC（以 A 為中心）
+        const vAB = sub(B, A);
+        const vAC = sub(C, A);
+        const a1 = angOf(vAB);
+        const a2 = angOf(vAC);
+        // 取短弧方向（內角 <=180）
+        const sgnA = cross(vAB, vAC) >= 0 ? 1 : -1;
+        const startA = a1;
+        const endA = a1 + sgnA * degToRad(angA || 0);
+        arcA.setAttribute("d", arcPath(A, rIn, startA, endA));
+
+        // 外角 A：從延長線方向（A->Aext）到 AC 的夾角，等於 180-內角
+        const vAExt = sub(Aext, A);
+        const e1 = angOf(vAExt);
+        const e2 = angOf(vAC);
+        const sgnExt = cross(vAExt, vAC) >= 0 ? 1 : -1;
+        const endExt = e1 + sgnExt * degToRad(extA || 0);
+        arcExtA.setAttribute("d", arcPath(A, rOut, e1, endExt));
+
+        // 內角 B
+        const vBA = sub(A, B);
+        const vBC = sub(C, B);
+        const b1 = angOf(vBA);
+        const sgnB = cross(vBA, vBC) >= 0 ? 1 : -1;
+        const endB = b1 + sgnB * degToRad(angB || 0);
+        arcB.setAttribute("d", arcPath(B, 48, b1, endB));
+
+        // 內角 C
+        const vCA = sub(A, C);
+        const vCB = sub(B, C);
+        const c1 = angOf(vCA);
+        const sgnC = cross(vCA, vCB) >= 0 ? 1 : -1;
+        const endC = c1 + sgnC * degToRad(angC || 0);
+        arcC.setAttribute("d", arcPath(C, 48, c1, endC));
+
+        // 文字：放在各點附近，避免蓋到點（用方向偏移）
+        const offA = add(A, mul(norm(add(norm(vAB), norm(vAC))), 26));
+        const offB = add(B, mul(norm(add(norm(vBA), norm(vBC))), 26));
+        const offC = add(C, mul(norm(add(norm(vCA), norm(vCB))), 26));
+        const offExt = add(A, mul(norm(add(norm(vAExt), norm(vAC))), 36));
+
+        setText(tA, add(offA, vec(0, -4)), `∠A ${fmtDeg(angA)}`);
+        setText(tB, add(offB, vec(0, -4)), `∠B ${fmtDeg(angB)}`);
+        setText(tC, add(offC, vec(0, -4)), `∠C ${fmtDeg(angC)}`);
+        setText(tExtA, add(offExt, vec(0, -4)), `∠A外 ${fmtDeg(extA)}`);
+      }
+
+      // 互動拖曳（Pointer Events：同時支援滑鼠/觸控/筆）
+      let dragging = null; // { key: 'A'|'B'|'C', pointerId }
+
+      function setPointByKey(key, P) {
+        const pad = 18;
+        const x = clamp(P.x, viewBox.x + pad, viewBox.x + viewBox.width - pad);
+        const y = clamp(P.y, viewBox.y + pad, viewBox.y + viewBox.height - pad);
+        if (key === "A") A = vec(x, y);
+        if (key === "B") B = vec(x, y);
+        if (key === "C") C = vec(x, y);
+      }
+
+      function onPointerDown(ev, key) {
+        ev.preventDefault();
+        dragging = { key, pointerId: ev.pointerId };
+        ev.target.setPointerCapture(ev.pointerId);
+        setPointByKey(key, svgPointFromClient(ev.clientX, ev.clientY));
+        render();
+      }
+      function onPointerMove(ev) {
+        if (!dragging || ev.pointerId !== dragging.pointerId) return;
+        ev.preventDefault();
+        setPointByKey(dragging.key, svgPointFromClient(ev.clientX, ev.clientY));
+        render();
+      }
+      function onPointerUp(ev) {
+        if (!dragging || ev.pointerId !== dragging.pointerId) return;
+        ev.preventDefault();
+        dragging = null;
+        render();
+      }
+
+      [
+        [pA, "A"],
+        [pB, "B"],
+        [pC, "C"],
+      ].forEach(([el, key]) => {
+        el.style.cursor = "grab";
+        el.addEventListener("pointerdown", (ev) => onPointerDown(ev, key));
+      });
+
+      svg.addEventListener("pointermove", onPointerMove);
+      svg.addEventListener("pointerup", onPointerUp);
+      svg.addEventListener("pointercancel", onPointerUp);
+      svg.addEventListener("pointerleave", onPointerUp);
+
+      function reset() {
+        A = vec(280, 160);
+        B = vec(170, 470);
+        C = vec(640, 420);
+        render();
+      }
+
+      function randomize() {
+        const pad = 110;
+        function rnd() {
+          return vec(
+            pad + Math.random() * (viewBox.width - 2 * pad),
+            pad + Math.random() * (viewBox.height - 2 * pad)
+          );
+        }
+        A = rnd();
+        B = rnd();
+        C = rnd();
+        render();
+      }
+
+      btnReset.addEventListener("click", reset);
+      btnRandom.addEventListener("click", randomize);
+
+      render();
+    </script>
+  </body>
+</html>
+
